@@ -1,0 +1,75 @@
+# This workflow automatically sets up a new repository with common configurations:
+# default labels, branch protection rules, and basic repository settings.
+#
+# It runs automatically when the repository is created, or can be triggered manually.
+# Customize the labels and branch protection settings below to match your project needs.
+
+name: Repository Setup Bot
+
+on:
+  workflow_dispatch:
+  create:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      administration: write
+    steps:
+      - name: Create default labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = [
+              { name: 'bug',           color: 'd73a4a', description: 'Something is not working' },
+              { name: 'documentation', color: '0075ca', description: 'Improvements or additions to documentation' },
+              { name: 'enhancement',   color: 'a2eeef', description: 'New feature or request' },
+              { name: 'good first issue', color: '7057ff', description: 'Good for newcomers' },
+              { name: 'help wanted',   color: '008672', description: 'Extra attention is needed' },
+              { name: 'invalid',       color: 'e4e669', description: 'This issue or pull request is invalid or incorrect' },
+              { name: 'question',      color: 'd876e3', description: 'Further information is requested' },
+              { name: 'wontfix',       color: 'ffffff', description: 'This will not be worked on' },
+            ];
+
+            for (const label of labels) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ...label,
+                });
+                core.info(`Created label: ${label.name}`);
+              } catch (err) {
+                if (err.status === 422) {
+                  core.info(`Label already exists, skipping: ${label.name}`);
+                } else {
+                  throw err;
+                }
+              }
+            }
+
+      - name: Protect default branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: repo } = await github.rest.repos.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            const branch = repo.default_branch;
+
+            await github.rest.repos.updateBranchProtection({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              branch,
+              required_status_checks: null,
+              enforce_admins: false,
+              required_pull_request_reviews: {
+                required_approving_review_count: 1,
+                dismiss_stale_reviews: true,
+              },
+              restrictions: null,
+            });
+            core.info(`Branch protection enabled on: ${branch}`);

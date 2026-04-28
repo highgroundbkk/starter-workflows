@@ -1,0 +1,6 @@
+{
+    "name": "Repository Setup Bot",
+    "description": "Automatically configures a new repository with default labels and branch protection rules",
+    "iconName": "octicon tools",
+    "categories": ["Automation", "SDLC"]
+}
